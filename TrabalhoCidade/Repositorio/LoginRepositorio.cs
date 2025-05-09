@@ -1,4 +1,7 @@
 ﻿using System.Configuration;
+using MySql.Data.MySqlClient;
+using MySqlX.XDevAPI;
+using TrabalhoCidade.Models;
 
 namespace TrabalhoCidade.Repositorio
 {
@@ -7,59 +10,74 @@ namespace TrabalhoCidade.Repositorio
 
         private readonly string _connectionString = configuration.GetConnectionString("MySQLConnection");
 
-        public void AdicionarUsuario(Usuario usuario, Tb_cliente cliente, Tb_email email)
+        
+
+        public void AdicionarUsuario(Usuario usuario)
         {
             using (var db = new Conexao(_connectionString))
             {
-                var cmd = db.MySqlCommand();
+                if (ValidarExistenciaUsuario(usuario) == false)
+                {
+                    var cmd = db.MySqlCommand();
 
-                cmd.CommandText = "INSERT INTO Tb_cliente (Cpf_cli, Nome_cli) VALUES (@Cpf,@Nome)";
-                cmd.Parameters.AddWithValue("@Cpf", cliente.Cpf_cli);
-                cmd.Parameters.AddWithValue("@Nome", cliente.Nome_cli);
-                cmd.ExecuteNonQuery();
-
-            }
-            using (var db = new Conexao(_connectionString))
-            {
-                var cmd = db.MySqlCommand();
-
-                cmd.CommandText = "INSERT INTO Tb_usuario (Cpf_cli, Usuario_cli, Senha_cli) VALUES (@Cpf,@Usuario,@Senha)";
-                cmd.Parameters.AddWithValue("@Cpf", usuario.Cpf_cli);
-                cmd.Parameters.AddWithValue("@Usuario", usuario.Usuario_cli);
-                cmd.Parameters.AddWithValue("@Senha", usuario.Senha_cli);
-                cmd.ExecuteNonQuery();
-
-            }
-            using (var db = new Conexao(_connectionString))
-            {
-                var cmd = db.MySqlCommand();
-
-                cmd.CommandText = "INSERT INTO Tb_email (Cpf_cli, Email) VALUES (@Cpf,@Email)";
-                cmd.Parameters.AddWithValue("@Cpf", email.Cpf_cli);
-                cmd.Parameters.AddWithValue("@Email", email.Email);
-                cmd.ExecuteNonQuery();
-
-            }
+                    cmd.CommandText = "INSERT INTO Usuario (Nome, Email, Senha) VALUES (@Nome,@Email,@Senha)";
+                    cmd.Parameters.AddWithValue("@Nome", usuario.Nome);
+                    cmd.Parameters.AddWithValue("@Email", usuario.Email);
+                    cmd.Parameters.AddWithValue("@Senha", usuario.Senha);
+                    cmd.ExecuteNonQuery();
+                }
+            }    
         }
 
-        public bool ValidarExistenciaUsuario(Tb_usuario tb_Usuario)
+        public Usuario ObterUsuario(Usuario usuario)
+        {
+            if(ValidarExistenciaUsuario(usuario) == true)
+            {
+                using (var db = new Conexao(_connectionString))
+                {
+                    var cmd = db.MySqlCommand();
+                    cmd.CommandText = "SELECT * FROM Usuario WHERE Email = @Email";
+                    cmd.Parameters.AddWithValue("@Email", usuario.Email);
+                    cmd.ExecuteNonQuery();
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        if (reader.Read())
+                        {
+                            return new Usuario
+                            {
+                                Id = reader.GetInt32("Id"),
+                                Nome = reader.GetString("Nome"),
+                                Email = reader.GetString("Email"),
+                                Senha = reader.GetString("Senha"),
+                            };
+                        }
+                    }
+                    return new Usuario();
+                }
+            }
+            else
+            {
+                return null;
+            }
+        }
+        
+        public bool ValidarExistenciaUsuario(Usuario usuario)
         {
             using (var db = new Conexao(_connectionString))
             {
                 var cmd = db.MySqlCommand();
-                cmd.CommandText = "SELECT * FROM Tb_usuario WHERE Cpf_cli = @Cpf";
-                cmd.Parameters.AddWithValue("@Cpf", tb_Usuario.Cpf_cli);
+                cmd.CommandText = "SELECT * FROM Tb_usuario WHERE Email = @Email";
+                cmd.Parameters.AddWithValue("@Email", usuario.Email);
                 cmd.ExecuteNonQuery();
                 using (var reader = cmd.ExecuteReader())
                 {
                     if (reader.Read())
                     {
-                        var usuariobanco = new Tb_usuario
+                        var usuariobanco = new Usuario
                         {
-                            Cpf_cli = reader.GetString("Cpf_cli"),
-                            Usuario_cli = reader.GetString("Usuario_cli"),
+                            Email = reader.GetString("Email"),
                         };
-                        if (tb_Usuario.Cpf_cli == usuariobanco.Cpf_cli || tb_Usuario.Usuario_cli == usuariobanco.Usuario_cli)
+                        if (usuario.Email == usuariobanco.Email)
                         {
                             return true;
                         }
@@ -76,61 +94,9 @@ namespace TrabalhoCidade.Repositorio
             }
 
         }
+        
 
 
-        public Tb_usuario ObterUsuarioCpf(Tb_usuario tb_Usuario)
-        {
-            using (var db = new Conexao(_connectionString))
-            {
-                var cmd = db.MySqlCommand();
-                cmd.CommandText = "SELECT * FROM Tb_usuario WHERE Cpf_cli = @Cpf";
-                cmd.Parameters.AddWithValue("@Cpf", tb_Usuario.Cpf_cli);
-                cmd.ExecuteNonQuery();
-                using (var reader = cmd.ExecuteReader())
-                {
-                    if (reader.Read())
-                    {
-                        return new Tb_usuario
-                        {
-                            Cpf_cli = reader.GetString("Cpf_cli"),
-                            Usuario_cli = reader.GetString("Usuario_cli"),
-                            Senha_cli = reader.GetString("Senha_cli"),
-                            Cargo_cli = reader.GetString("Cargo_cli"),
-                            Ativo_cli = reader.GetBoolean("Ativo_cli"),
-                        };
-                    }
-                    else
-                    {
-                        return null;
-                    }
-                }
-            }
-        }
-        public Tb_usuario ObterUsuarioUsu(Tb_usuario tb_Usuario)
-        {
-            using (var db = new Conexao(_connectionString))
-            {
-                var cmd = db.MySqlCommand();
-                cmd.CommandText = "SELECT * FROM Tb_usuario WHERE Usuario_cli = @Usuario";
-                cmd.Parameters.AddWithValue("@Usuario", tb_Usuario.Usuario_cli);
-                cmd.ExecuteNonQuery();
-                using (var reader = cmd.ExecuteReader())
-                {
-                    if (reader.Read())
-                    {
-                        return new Tb_usuario
-                        {
-                            Cpf_cli = reader.GetString("Cpf_cli"),
-                            Usuario_cli = reader.GetString("Usuario_cli"),
-                            Senha_cli = reader.GetString("Senha_cli"),
-                            Cargo_cli = reader.GetString("Cargo_cli"),
-                            Ativo_cli = reader.GetBoolean("Ativo_cli"),
-                        };
-                    }
-                }
-                return new Tb_usuario();
-            }
-        }
 
     }
 }
